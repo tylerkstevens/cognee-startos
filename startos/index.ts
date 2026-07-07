@@ -1,0 +1,8 @@
+export { manifest } from './manifest'
+export { main } from './main'
+export { setInterfaces } from './interfaces'
+export { setDependencies } from './dependencies'
+export { actions } from './actions'
+export { init } from './init'
+export { createBackup, restoreInit } from './backups'
+export { versionGraph } from './versions'

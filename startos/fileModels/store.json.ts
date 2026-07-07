@@ -1,0 +1,14 @@
+import { FileHelper, z } from '@start9labs/start-sdk'
+import { sdk } from '../sdk'
+
+const shape = z.object({
+  llmApiKey: z.string().optional().catch(undefined),
+  llmProvider: z.string().optional().catch(undefined),
+  llmModel: z.string().optional().catch(undefined),
+  llmEndpoint: z.string().optional().catch(undefined),
+})
+
+export const storeJson = FileHelper.json(
+  { base: sdk.volumes.main, subpath: './store.json' },
+  shape,
+)
