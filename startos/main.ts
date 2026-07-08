@@ -11,18 +11,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const model = (store && store.llmModel) || ''
   const endpoint = (store && store.llmEndpoint) || ''
 
+  const subcontainer = await sdk.SubContainer.of(
+    effects,
+    { imageId: 'cognee' },
+    sdk.Mounts.of().mountVolume({
+      volumeId: 'main',
+      subpath: null,
+      mountpoint: '/data',
+      readonly: false,
+    }),
+    'cognee-sub',
+  )
+
   return sdk.Daemons.of(effects).addDaemon('primary', {
-    subcontainer: await sdk.SubContainer.of(
-      effects,
-      { imageId: 'cognee' },
-      sdk.Mounts.of().mountVolume({
-        volumeId: 'main',
-        subpath: null,
-        mountpoint: '/data',
-        readonly: false,
-      }),
-      'cognee-sub',
-    ),
+    subcontainer,
     exec: {
       command: [
         'env',
@@ -36,7 +38,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
         'SYSTEM_ROOT_DIRECTORY=/data/.cognee_system',
         'ENV=local',
         'CORS_ALLOWED_ORIGINS=*',
-        'REQUIRE_AUTHENTICATION=***        'ENABLE_BACKEND_ACCESS_CONTROL=false',
+        'REQUIRE_AUTHENTICATION=false',
+        'ENABLE_BACKEND_ACCESS_CONTROL=false',
         'ACCEPT_LOCAL_FILE_PATH=false',
         '/app/entrypoint.sh',
       ],
