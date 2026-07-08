@@ -20,8 +20,10 @@ jobs:
 
       - name: Install start-cli
         run: |
-          curl -fsSL https://start9.com/start-cli/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          sudo curl -fsSL -o /usr/local/bin/start-cli \
+            https://github.com/Start9Labs/start-os/releases/download/v0.4.0-beta.9/start-cli_x86_64-linux
+          sudo chmod +x /usr/local/bin/start-cli
+          start-cli --version
 
       - name: Install npm deps & build
         run: npm ci && npm run build
