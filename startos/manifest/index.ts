@@ -15,6 +15,8 @@ export const manifest = setupManifest({
     cognee: {
       source: { dockerTag: 'cognee/cognee:latest' },
       arch: ['x86_64'],
+      emulateMissingAs: 'x86_64',
+      nvidiaContainer: false,
     },
   },
   alerts: {
@@ -26,4 +28,22 @@ export const manifest = setupManifest({
     stop: null,
   },
   dependencies: {},
-})
+  version: '0.1.0:0',
+  releaseNotes: {
+    en_US: 'Initial release of Cognee for StartOS.',
+  },
+  canMigrateTo: '=0.1.0:0',
+  canMigrateFrom: '<=0.1.0:0',
+  satisfies: [],
+  gitHash: null,
+  osVersion: '0.4.0-beta.9',
+  sdkVersion: '1.5.3',
+  hardwareAcceleration: false,
+  nestedRuntime: false,
+  plugins: [],
+  hardwareRequirements: {
+    device: [],
+    ram: null,
+    arch: ['x86_64'],
+  },
+} as any)

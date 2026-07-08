@@ -15,51 +15,25 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install build deps
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq squashfs-tools squashfs-tools-ng
+      - name: Install system deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq squashfs-tools
 
-      - name: Download start-cli v1.0.0
+      - name: Install start-cli
         run: |
-          curl -fsSL -o start-cli https://github.com/Start9Labs/start-os/releases/download/start-cli/v1.0.0/start-cli_x86_64-linux
-          chmod +x start-cli
-          ./start-cli --version
+          curl -fsSL https://start9.com/start-cli/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install dependencies & build
-        run: |
-          npm ci
-          npm run build
+      - name: Install npm deps & build
+        run: npm ci && npm run build
 
       - name: Init developer key
-        run: ./start-cli init-key
+        run: start-cli init-key
 
-      - name: Debug - show ingredients
-        run: ./start-cli s9pk list-ingredients 2>&1 || true
+      - name: Build s9pk
+        run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64
 
-      - name: Build s9pk (with verbose output)
-        id: build
-        run: |
-          set +e
-          ./start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 2>&1 | tee /tmp/build.log
-          EXIT_CODE=***  echo "exit_code=***" >> "$GITHUB_OUTPUT"
-          echo "=== Build output ==="
-          cat /tmp/build.log
-
-      - name: Show manifest (if built)
-        if: success()
-        run: ./start-cli s9pk inspect cognee_x86_64.s9pk manifest
-
-      - name: Upload artifact
-        if: success()
+      - name: Upload s9pk
         uses: actions/upload-artifact@v4
         with:
           name: cognee-s9pk
           path: cognee_x86_64.s9pk
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: /tmp/build.log
