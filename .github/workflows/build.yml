@@ -34,15 +34,32 @@ jobs:
       - name: Init developer key
         run: ./start-cli init-key
 
-      - name: Build s9pk
+      - name: Debug - show ingredients
+        run: ./start-cli s9pk list-ingredients 2>&1 || true
+
+      - name: Build s9pk (with verbose output)
+        id: build
         run: |
-          echo "=== Building s9pk ==="
-          ./start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 2>&1
-          echo "=== Build complete ==="
-          ls -la *.s9pk
+          set +e
+          ./start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 2>&1 | tee /tmp/build.log
+          EXIT_CODE=***  echo "exit_code=***" >> "$GITHUB_OUTPUT"
+          echo "=== Build output ==="
+          cat /tmp/build.log
+
+      - name: Show manifest (if built)
+        if: success()
+        run: ./start-cli s9pk inspect cognee_x86_64.s9pk manifest
 
       - name: Upload artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: cognee-s9pk
           path: cognee_x86_64.s9pk
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/build.log
