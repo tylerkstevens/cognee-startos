@@ -1,0 +1,33 @@
+name: Build s9pk
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install start-cli
+        run: curl -fsSL https://start9.com/start-cli/install.sh | sh
+
+      - name: Install dependencies & build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build s9pk
+        run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cognee-s9pk
+          path: cognee_x86_64.s9pk
