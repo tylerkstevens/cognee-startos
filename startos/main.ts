@@ -7,79 +7,38 @@ export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting Cognee...'))
 
   const store = await storeJson.read().once()
-
-  // Build .env content from stored config
-  const envLines: string[] = []
   const apiKey = (store && store.llmApiKey) || ''
-  envLines.push('LLM_API_KEY=' + apiKey)
-  if (store && store.llmProvider && store.llmProvider !== 'openai') {
-    envLines.push('LLM_PROVIDER=' + store.llmProvider)
-  }
-  if (store && store.llmModel) {
-    envLines.push('LLM_MODEL=' + store.llmModel)
-  }
-  if (store && store.llmEndpoint) {
-    envLines.push('LLM_ENDPOINT=' + store.llmEndpoint)
-  }
-  envLines.push('DB_PROVIDER=sqlite')
-  envLines.push('GRAPH_DATABASE_PROVIDER=kuzu')
-  envLines.push('VECTOR_DB_PROVIDER=lancedb')
-  envLines.push('DATA_ROOT_DIRECTORY=/data/.cognee_data')
-  envLines.push('SYSTEM_ROOT_DIRECTORY=/data/.cognee_system')
-  envLines.push('ENV=local')
-  envLines.push('CORS_ALLOWED_ORIGINS=*')
-  envLines.push('REQUIRE_AUTHENTICATION=false')
-  envLines.push('ENABLE_BACKEND_ACCESS_CONTROL=false')
-  envLines.push('ACCEPT_LOCAL_FILE_PATH=false')
-  envLines.push('')
-  const envContent = envLines.join('\n')
-
-  // Write .env to the main volume so Cognee can find it
-  await sdk.SubContainer.withTemp(
-    effects,
-    { imageId: 'cognee' },
-    sdk.Mounts.of().mountVolume({
-      volumeId: 'main',
-      subpath: null,
-      mountpoint: '/data',
-      readonly: false,
-    }),
-    'cognee-env-writer',
-    async (sub) => {
-      await sub.execFail([
-        'sh',
-        '-c',
-        'printf "%s" "$0" > /data/.env',
-        envContent,
-      ])
-    },
-  )
+  const model = (store && store.llmModel) || ''
+  const endpoint = (store && store.llmEndpoint) || ''
 
   return sdk.Daemons.of(effects).addDaemon('primary', {
     subcontainer: await sdk.SubContainer.of(
       effects,
       { imageId: 'cognee' },
-      sdk.Mounts.of()
-        .mountVolume({
-          volumeId: 'main',
-          subpath: null,
-          mountpoint: '/data',
-          readonly: false,
-        })
-        .mountVolume({
-          volumeId: 'main',
-          subpath: '.env',
-          mountpoint: '/app/.env',
-          readonly: false,
-          type: 'file',
-        }),
+      sdk.Mounts.of().mountVolume({
+        volumeId: 'main',
+        subpath: null,
+        mountpoint: '/data',
+        readonly: false,
+      }),
       'cognee-sub',
     ),
     exec: {
       command: [
-        'sh',
-        '-c',
-        'echo "=== .env contents ===" && cat /app/.env && echo "=== end .env ===" && set -a; . /app/.env; set +a && echo "LLM_API_KEY from env: $LLM_API_KEY" && echo "LLM_PROVIDER from env: $LLM_PROVIDER" && echo "LLM_MODEL from env: $LLM_MODEL" && echo "LLM_ENDPOINT from env: $LLM_ENDPOINT" && exec /app/entrypoint.sh',
+        'env',
+        'LLM_API_KEY=' + apiKey,
+        'LLM_MODEL=' + model,
+        'LLM_ENDPOINT=' + endpoint,
+        'DB_PROVIDER=sqlite',
+        'GRAPH_DATABASE_PROVIDER=kuzu',
+        'VECTOR_DB_PROVIDER=lancedb',
+        'DATA_ROOT_DIRECTORY=/data/.cognee_data',
+        'SYSTEM_ROOT_DIRECTORY=/data/.cognee_system',
+        'ENV=local',
+        'CORS_ALLOWED_ORIGINS=*',
+        'REQUIRE_AUTHENTICATION=***        'ENABLE_BACKEND_ACCESS_CONTROL=false',
+        'ACCEPT_LOCAL_FILE_PATH=false',
+        '/app/entrypoint.sh',
       ],
     },
     ready: {
