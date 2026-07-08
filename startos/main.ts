@@ -79,7 +79,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       command: [
         'sh',
         '-c',
-        'echo "=== .env contents ===" && cat /app/.env && echo "=== end .env ===" && set -a; . /app/.env; set +a; exec /app/entrypoint.sh',
+        'echo "=== .env contents ===" && cat /app/.env && echo "=== end .env ===" && set -a; . /app/.env; set +a && echo "LLM_API_KEY from env: $LLM_API_KEY" && echo "LLM_PROVIDER from env: $LLM_PROVIDER" && echo "LLM_MODEL from env: $LLM_MODEL" && echo "LLM_ENDPOINT from env: $LLM_ENDPOINT" && exec /app/entrypoint.sh',
       ],
     },
     ready: {
