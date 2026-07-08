@@ -1,4 +1,4 @@
-name: Build s9pk
+name: Build and Release s9pk
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +34,6 @@ jobs:
           mkdir -p ~/.startos
           printf '%s' "$REGISTRY_ADMIN_KEY" | base64 -d > ~/.startos/developer.key.pem
           chmod 600 ~/.startos/developer.key.pem
-          echo "Key size: $(wc -c < ~/.startos/developer.key.pem) bytes"
-          echo "Public key:"
-          start-cli pubkey
         env:
           REGISTRY_ADMIN_KEY: ${{ secrets.REGISTRY_ADMIN_KEY }}
 
@@ -44,8 +43,10 @@ jobs:
       - name: Build s9pk
         run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 --no-assets
 
-      - name: Upload s9pk
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: cognee-s9pk
-          path: cognee_x86_64.s9pk
+          name: "Cognee ${{ github.sha }}"
+          tag_name: "build-${{ github.run_number }}"
+          files: cognee_x86_64.s9pk
+          fail_on_unmatched_files: true
