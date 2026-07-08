@@ -75,7 +75,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
         }),
       'cognee-sub',
     ),
-    exec: { command: ['/app/entrypoint.sh'] },
+    exec: {
+      command: [
+        'sh',
+        '-c',
+        'set -a; . /app/.env; set +a; exec /app/entrypoint.sh',
+      ],
+    },
     ready: {
       display: i18n('AI Memory Platform'),
       fn: () =>
