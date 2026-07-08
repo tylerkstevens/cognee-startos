@@ -30,8 +30,13 @@ jobs:
       - name: Set up signing key
         run: |
           mkdir -p ~/.startos
-          echo "${{ secrets.REGISTRY_ADMIN_KEY }}" | base64 -d > ~/.startos/developer.key.pem
+          printf '%s' "$REGISTRY_ADMIN_KEY" | base64 -d > ~/.startos/developer.key.pem
           chmod 600 ~/.startos/developer.key.pem
+          echo "Key size: $(wc -c < ~/.startos/developer.key.pem) bytes"
+          echo "Public key:"
+          start-cli pubkey
+        env:
+          REGISTRY_ADMIN_KEY: ${{ secrets.REGISTRY_ADMIN_KEY }}
 
       - name: Install npm deps & build
         run: npm ci && npm run build
