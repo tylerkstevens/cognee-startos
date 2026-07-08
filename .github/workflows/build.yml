@@ -27,11 +27,14 @@ jobs:
           sudo chmod +x /usr/local/bin/start-cli
           start-cli --version
 
+      - name: Set up signing key
+        run: |
+          mkdir -p ~/.startos
+          echo "${{ secrets.REGISTRY_ADMIN_KEY }}" | base64 -d > ~/.startos/developer.key.pem
+          chmod 600 ~/.startos/developer.key.pem
+
       - name: Install npm deps & build
         run: npm ci && npm run build
-
-      - name: Init developer key
-        run: start-cli init-key
 
       - name: Build s9pk
         run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 --no-assets
