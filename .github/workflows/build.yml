@@ -15,21 +15,25 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install start-cli
-        run: |
-          curl -fsSL https://start9.com/start-cli/install.sh | sh
-          echo "$HOME/.local/share/start-cli/bin" >> "$GITHUB_PATH"
+      - name: Install squashfs-tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq squashfs-tools-ng
 
-      - name: Install dependencies & build JS
+      - name: Download start-cli
+        run: |
+          curl -fsSL -o start-cli https://github.com/Start9Labs/start-os/releases/download/v0.4.0-beta.9/start-cli_x86_64-linux
+          chmod +x start-cli
+          ./start-cli --version
+
+      - name: Install dependencies & build
         run: |
           npm ci
           npm run build
 
       - name: Init developer key
-        run: start-cli init-key
+        run: ./start-cli init-key
 
       - name: Build s9pk
-        run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64
+        run: ./start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
