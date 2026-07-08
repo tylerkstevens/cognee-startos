@@ -34,7 +34,7 @@ jobs:
         run: start-cli init-key
 
       - name: Build s9pk
-        run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64
+        run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 --no-assets
 
       - name: Upload s9pk
         uses: actions/upload-artifact@v4
