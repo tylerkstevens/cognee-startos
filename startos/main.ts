@@ -24,6 +24,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   envLines.push('DB_PROVIDER=sqlite')
   envLines.push('GRAPH_DATABASE_PROVIDER=kuzu')
   envLines.push('VECTOR_DB_PROVIDER=lancedb')
+  envLines.push('DATA_ROOT_DIRECTORY=/data/.cognee_data')
+  envLines.push('SYSTEM_ROOT_DIRECTORY=/data/.cognee_system')
   envLines.push('ENV=local')
   envLines.push('CORS_ALLOWED_ORIGINS=*')
   envLines.push('REQUIRE_AUTHENTICATION=false')
