@@ -79,7 +79,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       command: [
         'sh',
         '-c',
-        'set -a; . /app/.env; set +a; exec /app/entrypoint.sh',
+        'echo "=== .env contents ===" && cat /app/.env && echo "=== end .env ===" && set -a; . /app/.env; set +a; exec /app/entrypoint.sh',
       ],
     },
     ready: {
