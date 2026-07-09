@@ -47,7 +47,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'CORS_ALLOWED_ORIGINS=*',
     'REQUIRE_AUTHENTICATION=false',
     'ENABLE_BACKEND_ACCESS_CONTROL=false',
-    'ACCEPT_LOCAL_FILE_PATH=false',
+    'ACCEPT_LOCAL_FILE_PATH=true',
   ].join(' ')
 
   return sdk.Daemons.of(effects).addDaemon('primary', {
