@@ -22,17 +22,17 @@ const inputSpec = InputSpec.of({
   }),
   llmModel: Value.text({
     name: i18n('LLM Model'),
-    description: 'Model name (e.g. gpt-4o, claude-sonnet-4-20250514)',
+    description: 'Model name (e.g. openai/gpt-4.1-mini or deepseek/deepseek-v4-flash)',
     required: false,
-    default: 'gpt-4o',
-    placeholder: 'gpt-4o',
+    default: 'openai/gpt-4.1-mini',
+    placeholder: 'openai/gpt-4.1-mini',
   }),
   llmEndpoint: Value.text({
     name: i18n('API Endpoint'),
     description: i18n('Optional custom API endpoint'),
     required: false,
-    default: '',
-    placeholder: 'https://api.openai.com/v1',
+    default: 'https://openrouter.ai/api/v1',
+    placeholder: 'https://openrouter.ai/api/v1',
   }),
 })
 
@@ -54,8 +54,8 @@ export const configureLlm = sdk.Action.withInput(
     return {
       llmApiKey: store?.llmApiKey,
       llmProvider: store?.llmProvider || 'openai',
-      llmModel: store?.llmModel || 'gpt-4o',
-      llmEndpoint: store?.llmEndpoint || '',
+      llmModel: store?.llmModel || 'openai/gpt-4.1-mini',
+      llmEndpoint: store?.llmEndpoint || 'https://openrouter.ai/api/v1',
     }
   },
   async ({ effects, input }) => {
