@@ -3,22 +3,26 @@ import { sdk } from './sdk'
 /**
  * Cognee backup strategy:
  *
- * PROBLEM: rsync of the entire 'main' volume times out after 300 seconds
- * because Cognee's active databases (LanceDB, Kuzu) create many files and
- * ongoing writes can stall rsync.
+ * PROBLEM: LanceDB vector store creates ~65,000 small parquet files (2.2 GB).
+ * Both rsync and tar time out (>300s) trying to enumerate/compress this many
+ * files on the current hardware.
  *
  * FIX:
- * 1. Pre-backup: Shut down Cognee daemon gracefully — stops all writes
- *    and ensures database consistency before rsync begins
- * 2. Post-backup: Restart Cognee daemon after rsync completes
- * 3. Pre-restore: Same — stop before writing
- * 4. Post-restore: Restart after restore
+ * 1. Back up the 'main' volume, but EXCLUDE the LanceDB directory
+ *    (cognee.lancedb/ — 65K files, the bottleneck)
+ * 2. The SQLite database at cognee_db contains all source document text and
+ *    can regenerate vectors on restore via Cognee's re-indexing
+ * 3. The Kuzu graph DB (cognee_graph_kuzu) IS backed up — preserves graph structure
+ * 4. Pre/Post hooks stop/start Cognee for database consistency
  *
- * This uses the standard `ofVolumes` approach (backs up entire 'main' volume),
- * which includes .cognee_data, .cognee_system, config, and all other data.
+ * ON RESTORE: The user will need to re-run ingestion on source documents
+ * to rebuild the LanceDB vector index. Source text is preserved in SQLite.
  */
 export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }) =>
   sdk.Backups.ofVolumes('main')
+    .setBackupOptions({
+      exclude: ['.cognee_system/databases/cognee.lancedb/'],
+    })
     .setPreBackup(async (effects) => {
       // Gracefully stop Cognee to ensure database consistency
       await effects.shutdown()
