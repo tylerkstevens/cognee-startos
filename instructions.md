@@ -1,43 +1,185 @@
-# Cognee — AI Memory Platform
+# Cognee — AI Memory Platform for StartOS
 
-Cognee is an open-source AI memory platform that gives AI agents persistent long-term memory across sessions.
+Cognee is an open-source AI memory platform that gives AI agents persistent long-term memory across sessions. Ingest data in any format, build a self-hosted knowledge graph with vector search and graph reasoning, and let agents recall, connect, and act with full context.
 
-## Features
+**This package runs Cognee as a StartOS service on port 8000.** It is pre-configured for use with an OpenAI-compatible API endpoint (OpenRouter, OpenAI, etc.) and uses embedded databases — no external setup required.
 
-- **Knowledge Graphs** — Build self-hosted knowledge graphs from your documents
-- **Vector Search** — Semantic search across all ingested content
-- **Multi-format Ingestion** — PDFs, text, code, websites, and more
-- **Graph Reasoning** — Connect documents by relationships that evolve with your knowledge
-- **API Access** — REST API at port 8000 for integration with AI agents
+---
+
+## Before You Start
+
+You need an **API key** from an OpenAI-compatible LLM provider. Cognee uses this for:
+- **LLM calls** — generating summaries, extracting entities and relationships, answering queries
+- **Embeddings** — generating vector embeddings for semantic search
+
+### Recommended: OpenRouter
+
+This service is configured to work with OpenRouter out of the box, giving you access to hundreds of models without managing multiple API keys. Get one at [openrouter.ai/keys](https://openrouter.ai/keys).
+
+The default setup uses:
+- **LLM:** `openai/gpt-4o-mini` (fast, cheap, good quality)
+- **Embeddings:** `openai/text-embedding-3-small` (1536-dim, low cost)
+
+You can change these in the Configure LLM action.
+
+**Alternative providers:** OpenAI, Anthropic, Groq, or any OpenAI-compatible endpoint.
+
+---
 
 ## Setup
 
-1. **Configure LLM** — Use the "Configure LLM" action to set your API key, provider, and model.
-   - Default provider: OpenAI
-   - Supports: OpenAI, Anthropic, Ollama, and any OpenAI-compatible endpoint
-2. **Start the service** — Cognee runs on its own with embedded databases (no external DBs needed).
-3. **Access the API** — The web interface and API are available at the service URL shown above.
+### 1. Configure the LLM
 
-## Default Configuration
+Use the **Configure LLM** action from the StartOS UI or via `start-cli`:
 
-- **LLM**: Requires an API key to function (OpenAI, Anthropic, or compatible)
-- **Databases**: SQLite + LanceDB + KuzuDB (all embedded, no setup required)
-- **Port**: 8000 (HTTP)
-- **Auth**: Disabled by default (single-user mode)
+- **API Key** — Your OpenRouter (or OpenAI-compatible) API key
+- **API Endpoint** — `https://openrouter.ai/api/v1`
+- **LLM Model** — `openai/gpt-4o-mini` (or your preferred model)
+- **Embedding Model** — `openai/text-embedding-3-small` (1536-dim)
+- **Embedding Endpoint** — `https://openrouter.ai/api/v1`
 
-## API Usage
+The API key is stored in `store.json` on the persistent volume and read at startup.
 
-Once running, interact with Cognee via its REST API:
+### 2. Start the service
 
-```python
-import cognee
-await cognee.remember("Your knowledge goes here")
-results = await cognee.recall("What do I know about X?")
+Once configured, start Cognee from the StartOS UI. The web interface and API become available at the service URL shown on the service page (default: port 8000).
+
+### 3. Verify it's running
+
+```bash
+curl http://cognee.embassy:8000/health
+# {"status":"ready","health":"healthy","version":"1.2.2-local"}
 ```
 
-Or use the Cognee MCP server to integrate with AI coding assistants like Claude and Cursor.
+---
 
-## Documentation
+## How to Use Cognee
 
-- [Cognee Docs](https://docs.cognee.ai)
-- [GitHub](https://github.com/topoteretes/cognee)
+### Ingest data (documents, text, files)
+
+Via REST API:
+
+```bash
+# Upload a text file to a dataset
+curl -X POST "http://cognee.embassy:8000/api/v1/add" \
+  -F "data=@my-document.txt" \
+  -F "datasetName=my-knowledge"
+```
+
+Supported formats: text, PDF (via pypdf), CSV, images (via captioning), audio (via transcription), and web pages.
+
+### Query / recall
+
+Via REST API:
+```bash
+# Search across all datasets
+curl -X POST "http://cognee.embassy:8000/api/v1/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What do I know about X?", "datasets": ["my-knowledge"]}'
+```
+
+### Export dataset content
+
+Each dataset can be exported as a human-readable text dump of all summaries, entities, and relationships:
+
+```bash
+curl "http://cognee.embassy:8000/api/v1/activity/export/{dataset_id}"
+```
+
+This is used by the daily backup pipeline to produce semantic text exports for disaster recovery.
+
+---
+
+## Datasets & Organization
+
+Cognee organizes data into **datasets**. You create them by naming the dataset when you ingest data. Each dataset has its own vector index, knowledge graph, and document store.
+
+This StartOS instance is pre-configured for:
+- **Auto-ingestion pipelines** — Email (via Hermes cron), Pocket recordings, Obsidian vault notes
+- **Manual ingestion** — Upload any document via the API
+
+---
+
+## Backup & Restore
+
+The package uses a **two-tier backup strategy:**
+
+### Tier 1: StartOS Local Backup (full binary)
+
+During backup, Cognee is stopped and all data is archived into a single tar file (`/data/.cognee_backup/cognee-data.tar`). This preserves:
+
+| Data | Contents | Size |
+|------|----------|------|
+| `.cognee_data` | Raw text chunks and document storage | ~100 MB |
+| `.cognee_system` | LanceDB vectors + Kuzu graph DB + SQLite | ~2.6 GB (65K+ files) |
+| `store.json` | API key and model configuration | ~1 KB |
+
+The tar file is rsynced to the backup target as a single file, avoiding the timeout that affects raw rsync of 65K+ tiny files. On restore, the tar is extracted and Cognee resumes with all vectors and graph data intact.
+
+**Note:** The first backup may take 2–3 minutes as it tar-compresses ~2.6 GB of data.
+
+### Tier 2: Semantic Text Export (GitHub)
+
+A separate daily pipeline exports all datasets as markdown text (summaries, entities, relationships) to GitHub. This provides a lightweight backup that can be re-ingested from scratch if needed.
+
+---
+
+## API Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Service health check |
+| `/api/v1/add` | POST | Ingest a document (multipart: `data` + `datasetName`) |
+| `/api/v1/search` | POST | Search across datasets |
+| `/api/v1/activity/export/{dataset_id}` | GET | Export dataset as markdown |
+| `/api/v1/activity/pipeline-runs` | GET | List recent pipeline runs |
+| `/` | GET | Root health check |
+
+---
+
+## For Developers
+
+The StartOS package source is at `github.com/tylerkstevens/cognee-startos`. The package:
+- Uses `@start9labs/start-sdk` v1.5.3
+- Builds via ncc + GitHub Actions CI
+- Uses embedded databases: LanceDB (vectors), Kuzu (graph), SQLite (metadata)
+- Runs on StartOS 0.4.0+
+
+### Environment variables (injected at startup)
+
+| Variable | Value |
+|----------|-------|
+| `LLM_API_KEY` | From store.json configuration |
+| `LLM_PROVIDER` | `openai` (forced — works with any OpenAI-compatible endpoint) |
+| `LLM_MODEL` | Configurable via Configure LLM action |
+| `LLM_ENDPOINT` | Configurable |
+| `EMBEDDING_API_KEY` | Same as LLM API key |
+| `EMBEDDING_PROVIDER` | `openai` |
+| `EMBEDDING_MODEL` | Configurable |
+| `EMBEDDING_ENDPOINT` | Configurable |
+| `VECTOR_DB_PROVIDER` | `lancedb` |
+| `GRAPH_DATABASE_PROVIDER` | `kuzu` |
+| `DB_PROVIDER` | `sqlite` |
+| `REQUIRE_AUTHENTICATION` | `false` |
+| `ENABLE_BACKEND_ACCESS_CONTROL` | `false` |
+| `ACCEPT_LOCAL_FILE_PATH` | `true` |
+
+---
+
+## Troubleshooting
+
+| Problem | Likely Cause | Fix |
+|---------|-------------|-----|
+| Health check returns "not ready" | Cognee still loading LanceDB | Wait 30–60 seconds after start |
+| `/datasets` returns 404 | Not a valid endpoint | Use `/api/v1/activity/pipeline-runs` instead |
+| Backup shows tar error | Staging directory missing (pre-v0.1.3) | Upgrade to v0.1.3+ |
+| API key errors on ingest | Key not set or expired | Run Configure LLM action again |
+| Slow first pipeline run | Embedding model first call (cold start) | Subsequent runs are faster |
+
+---
+
+## Resources
+
+- [Upstream Cognee GitHub](https://github.com/topoteretes/cognee)
+- [Cognee Documentation](https://docs.cognee.ai)
+- [StartOS Package Repo](https://github.com/tylerkstevens/cognee-startos) (source + CI builds)
