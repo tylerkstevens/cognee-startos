@@ -3,40 +3,115 @@ import { sdk } from './sdk'
 /**
  * Cognee backup strategy:
  *
- * PROBLEM: LanceDB vector store creates ~65,000 small parquet files (2.2 GB).
- * Both rsync and tar time out (>300s) trying to enumerate/compress this many
- * files on the current hardware.
+ * LanceDB creates ~65,000 small parquet files (~2.2 GB). StartOS's SDK runs
+ * rsync with a hardcoded --timeout=300. Rsync starves on metadata/enumeration
+ * between tiny files and exits with code 30, so we can't back up the raw
+ * filesystem tree as-is.
  *
- * FIX:
- * 1. Back up the 'main' volume, but EXCLUDE the LanceDB directory
- *    (cognee.lancedb/ — 65K files, the bottleneck)
- * 2. The SQLite database at cognee_db contains all source document text and
- *    can regenerate vectors on restore via Cognee's re-indexing
- * 3. The Kuzu graph DB (cognee_graph_kuzu) IS backed up — preserves graph structure
- * 4. Pre/Post hooks stop/start Cognee for database consistency
- *
- * ON RESTORE: The user will need to re-run ingestion on source documents
- * to rebuild the LanceDB vector index. Source text is preserved in SQLite.
+ * FIX: stop Cognee, then archive the live data directories into one tar file.
+ * StartOS then rsyncs a single large file, which easily stays under the 300s
+ * idle timeout and gives us a complete restore of EVERYTHING (LanceDB, Kuzu,
+ * SQLite source text, store.json).
  */
+
+const BACKUP_DIR = '.cognee_backup'
+const BACKUP_TAR = `${BACKUP_DIR}/cognee-data.tar`
+
+const VOLUME_DATA_PATH = `/media/startos/volumes/main/${BACKUP_TAR}` as const
+const BACKUP_TARGET_PATH = `/media/startos/backup/volumes/main/${BACKUP_TAR}` as const
+
+type BackupOperation = 'archive' | 'extract'
+
+async function runCogneeTarStep(
+  effects: any,
+  operation: BackupOperation,
+): Promise<void> {
+  // Mount the live volume read-only when archiving, read-write when extracting.
+  const readonly = operation === 'archive'
+
+  const mounts = sdk.Mounts.of().mountVolume({
+    volumeId: 'main',
+    subpath: null,
+    mountpoint: '/data',
+    readonly,
+  })
+
+  const subcontainer = await sdk.SubContainer.of(
+    effects,
+    { imageId: 'cognee' },
+    mounts,
+    `cognee-backup-${operation}`,
+  )
+
+  try {
+    if (operation === 'archive') {
+      // Remove any stale archive before creating a fresh full snapshot.
+      await subcontainer.exec(
+        ['rm', '-f', `/data/${BACKUP_TAR}`],
+        {},
+        60000,
+      )
+      await subcontainer.execFail(
+        [
+          'tar',
+          '-cf',
+          `/data/${BACKUP_TAR}`,
+          '-C',
+          '/data',
+          '.cognee_data',
+          '.cognee_system',
+          'store.json',
+        ],
+        {},
+        1800000, // 30 minutes is very generous; tar is one sequential pass
+      )
+    } else {
+      // Restore: wipe old dirs so we don't mix stale files with the backup.
+      await subcontainer.exec(
+        ['rm', '-rf', '/data/.cognee_data', '/data/.cognee_system'],
+        {},
+        120000,
+      )
+      await subcontainer.execFail(
+        ['tar', '-xf', `/data/${BACKUP_TAR}`, '-C', '/data'],
+        {},
+        1800000,
+      )
+      // Staging file is no longer needed after extraction.
+      await subcontainer.exec(
+        ['rm', '-rf', `/data/${BACKUP_DIR}`],
+        {},
+        60000,
+      )
+    }
+  } finally {
+    await subcontainer.destroy()
+  }
+}
+
 export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }) =>
-  sdk.Backups.ofVolumes('main')
-    .setBackupOptions({
-      exclude: ['.cognee_system/databases/cognee.lancedb/'],
-    })
+  sdk.Backups.ofSyncs({
+    dataPath: VOLUME_DATA_PATH,
+    backupPath: BACKUP_TARGET_PATH,
+  })
     .setPreBackup(async (effects) => {
-      // Gracefully stop Cognee to ensure database consistency
+      // Stop Cognee so the DB files are quiescent, then collapse the data tree
+      // into one tar file on the live volume.
       await effects.shutdown()
+      await runCogneeTarStep(effects, 'archive')
     })
     .setPostBackup(async (effects) => {
-      // Restart Cognee
+      // Cognee can restart. Leave the tar on disk; it is overwritten on the
+      // next backup and costs only ~2 GB on the NVMe volume.
       await effects.restart()
     })
     .setPreRestore(async (effects) => {
-      // Stop Cognee before restoring data
       await effects.shutdown()
+      // The SDK has already synced the tar from backup target to the live volume.
+      // Extract it back into the data directories.
+      await runCogneeTarStep(effects, 'extract')
     })
     .setPostRestore(async (effects) => {
-      // Restart Cognee after restore
       await effects.restart()
     }),
 )
