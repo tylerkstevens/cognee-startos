@@ -1,6 +1,6 @@
 import { i18n } from './i18n'
 import { sdk } from './sdk'
-import { uiPort } from './utils'
+import { apiPort, uiPort } from './utils'
 import { storeJson } from './fileModels/store.json'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -13,17 +13,26 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // Use the same key for embeddings when no separate emb key is configured.
   // OpenRouter charges for embeddings; local GPU-less embeddings are a bad fit.
 
-  const subcontainer = await sdk.SubContainer.of(
-    effects,
-    { imageId: 'cognee' },
-    sdk.Mounts.of().mountVolume({
-      volumeId: 'main',
-      subpath: null,
-      mountpoint: '/data',
-      readonly: false,
-    }),
-    'cognee-sub',
-  )
+  // Create both subcontainers up front so daemon types infer cleanly.
+  const [subcontainer, uiSubcontainer] = await Promise.all([
+    sdk.SubContainer.of(
+      effects,
+      { imageId: 'cognee' },
+      sdk.Mounts.of().mountVolume({
+        volumeId: 'main',
+        subpath: null,
+        mountpoint: '/data',
+        readonly: false,
+      }),
+      'cognee-sub',
+    ),
+    sdk.SubContainer.of(
+      effects,
+      { imageId: 'cognee-frontend' },
+      sdk.Mounts.of(),
+      'cognee-ui-sub',
+    ),
+  ])
 
   // Embeddings + LLM both point at OpenRouter via the shared API key.
   // Construction via sh -c is intentional: StartOS env propagation into
@@ -50,23 +59,39 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'ACCEPT_LOCAL_FILE_PATH=true',
   ].join(' ')
 
-  return sdk.Daemons.of(effects).addDaemon('primary', {
-    subcontainer,
-    exec: {
-      command: [
-        'sh',
-        '-c',
-        envPrefix + ' exec /app/entrypoint.sh',
-      ],
-    },
-    ready: {
-      display: i18n('AI Memory Platform'),
-      fn: () =>
-        sdk.healthCheck.checkPortListening(effects, uiPort, {
-          successMessage: i18n('The Cognee API and web interface'),
-          errorMessage: i18n('The Cognee API and web interface'),
-        }),
-    },
-    requires: [],
-  })
+  return sdk.Daemons.of(effects)
+    .addDaemon('primary', {
+      subcontainer,
+      exec: {
+        command: [
+          'sh',
+          '-c',
+          envPrefix + ' exec /app/entrypoint.sh',
+        ],
+      },
+      ready: {
+        display: i18n('AI Memory Platform'),
+        fn: () =>
+          sdk.healthCheck.checkPortListening(effects, apiPort, {
+            successMessage: i18n('The Cognee API is ready'),
+            errorMessage: i18n('The Cognee API is not ready'),
+          }),
+      },
+      requires: [],
+    })
+    .addDaemon('ui', {
+      subcontainer: uiSubcontainer,
+      exec: {
+        command: ['npm', 'run', 'start'],
+      },
+      ready: {
+        display: i18n('Cognee UI'),
+        fn: () =>
+          sdk.healthCheck.checkPortListening(effects, uiPort, {
+            successMessage: i18n('The Cognee UI is ready'),
+            errorMessage: i18n('The Cognee UI is not ready'),
+          }),
+      },
+      requires: ['primary' as const],
+    })
 })

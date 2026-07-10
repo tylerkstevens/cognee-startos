@@ -2,7 +2,7 @@
 
 Cognee is an open-source AI memory platform that gives AI agents persistent long-term memory across sessions. Ingest data in any format, build a self-hosted knowledge graph with vector search and graph reasoning, and let agents recall, connect, and act with full context.
 
-**This package runs Cognee as a StartOS service on port 8000.** It is pre-configured for use with an OpenAI-compatible API endpoint (OpenRouter, OpenAI, etc.) and uses embedded databases — no external setup required.
+**This package runs Cognee as a StartOS service.** The native web UI is available on port 3000 and the REST API on port 8000. It is pre-configured for use with an OpenAI-compatible API endpoint (OpenRouter, OpenAI, etc.) and uses embedded databases — no external setup required.
 
 ---
 
@@ -42,13 +42,20 @@ The API key is stored in `store.json` on the persistent volume and read at start
 
 ### 2. Start the service
 
-Once configured, start Cognee from the StartOS UI. The web interface and API become available at the service URL shown on the service page (default: port 8000).
+Once configured, start Cognee from the StartOS UI.
+
+- Click **Open UI** to use the native Cognee web interface (port 3000)
+- Use the **Cognee API** interface for direct REST access (port 8000)
 
 ### 3. Verify it's running
 
 ```bash
+# API health check
 curl http://cognee.embassy:8000/health
 # {"status":"ready","health":"healthy","version":"1.2.2-local"}
+
+# UI is ready when port 3000 responds
+curl -I http://cognee.embassy:3000
 ```
 
 ---
