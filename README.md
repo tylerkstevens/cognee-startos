@@ -1,6 +1,6 @@
 # Cognee — StartOS Package
 
-![Version](https://img.shields.io/badge/version-0.1.3-blue)
+![Version](https://img.shields.io/badge/version-0.1.4-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![StartOS](https://img.shields.io/badge/StartOS-0.4.0+-orange)
 
@@ -37,8 +37,8 @@ Then use the **Configure LLM** action in the StartOS UI to set your API key, the
 | Component | Details |
 |-----------|---------|
 | **Upstream** | [Cognee](https://github.com/topoteretes/cognee) — Apache 2.0 licensed |
-| **Container** | `cognee/cognee:latest` (x86_64) |
-| **Port** | 8000 — REST API + web UI |
+| **Container** | `cognee/cognee:latest` (API) + `ghcr.io/tylerkstevens/cognee-frontend:latest` (UI) |
+| **Ports** | 3000 — native Cognee web UI (Open UI); 8000 — REST API |
 | **Databases** | LanceDB (vectors), Kuzu (graph), SQLite (metadata) — all embedded, zero setup |
 | **LLM** | OpenAI-compatible endpoint — pre-configured for OpenRouter |
 | **SDK** | `@start9labs/start-sdk` v1.5.3 |
@@ -47,10 +47,11 @@ Then use the **Configure LLM** action in the StartOS UI to set your API key, the
 
 ## Features
 
+- **Native web UI** — click Open UI to use Cognee's own interface on port 3000
+- **REST API** — full control via HTTP at port 8000
 - **Self-hosted knowledge graphs** — documents, emails, recordings, websites all become queryable memory
 - **Vector + graph search** — semantic similarity and relationship traversal
 - **Multi-format ingestion** — PDFs, text, CSV, images (captioning), audio (transcription), web pages
-- **REST API** — full control via HTTP at port 8000
 - **Two-tier backup** — binary tar (full restore) + semantic text exports (re-ingest safety net)
 - **Auto-ingestion pipelines** — designed to integrate with Hermes Agent cron workflows (email, Pocket, Obsidian)
 
@@ -88,9 +89,7 @@ Signed releases are available on the [Releases page](https://github.com/tylerkst
 
 ## Registry Status
 
-Currently available via **sideload** only. Working toward:
-
-- ✅ **Self-hosted registry publish** — publish to a personal `startos-registry` for LAN discovery
+- ✅ **Self-hosted registry** — published to `https://192.168.0.4:50286` (Personal Registry)
 - 🔜 **Community Registry submission** — polish and submit for global StartOS discoverability
 
 ---

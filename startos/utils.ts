@@ -1,1 +1,2 @@
-export const uiPort = 8000
+export const apiPort = 8000
+export const uiPort = 3000
