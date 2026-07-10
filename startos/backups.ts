@@ -26,14 +26,13 @@ async function runCogneeTarStep(
   effects: any,
   operation: BackupOperation,
 ): Promise<void> {
-  // Mount the live volume read-only when archiving, read-write when extracting.
-  const readonly = operation === 'archive'
-
+  // We need write access to the volume during archive (to create the staging
+  // tar file) and during extract (to restore the data directories).
   const mounts = sdk.Mounts.of().mountVolume({
     volumeId: 'main',
     subpath: null,
     mountpoint: '/data',
-    readonly,
+    readonly: false,
   })
 
   const subcontainer = await sdk.SubContainer.of(
@@ -45,7 +44,12 @@ async function runCogneeTarStep(
 
   try {
     if (operation === 'archive') {
-      // Remove any stale archive before creating a fresh full snapshot.
+      // Ensure the staging directory exists, then remove any stale archive.
+      await subcontainer.execFail(
+        ['mkdir', '-p', `/data/${BACKUP_DIR}`],
+        {},
+        60000,
+      )
       await subcontainer.exec(
         ['rm', '-f', `/data/${BACKUP_TAR}`],
         {},

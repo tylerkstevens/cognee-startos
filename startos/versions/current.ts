@@ -1,9 +1,9 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.1.2:0',
+  version: '0.1.3:0',
   releaseNotes: {
-    en_US: 'Backup LanceDB and all Cognee data via a single tar archive.',
+    en_US: 'Create tar staging directory before archiving and mount volume read-write during backup.',
   },
   migrations: {
     up: async ({ effects }) => {},
