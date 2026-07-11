@@ -40,14 +40,23 @@ Use the **Configure LLM** action from the StartOS UI or via `start-cli`:
 
 The API key is stored in `store.json` on the persistent volume and read at startup.
 
-### 2. Start the service
+### 2. Start the service and open the UI
 
 Once configured, start Cognee from the StartOS UI.
 
-- Click **Open UI** to use the native Cognee web interface (port 3000)
+- Click **Open UI** to open the native Cognee web interface (port 3000)
 - Use the **Cognee API** interface for direct REST access (port 8000)
 
-### 3. Verify it's running
+### 3. Sign in to the local instance
+
+The native UI opens to the *Local instance* sign-in page. Use the default local credentials already filled in:
+
+- **Email:** `default_user@example.com`
+- **Password:** `default_password`
+
+These credentials are created automatically by the local Cognee backend. After signing in you can change the password from the UI or use an API key.
+
+### 4. Verify it's running
 
 ```bash
 # API health check
