@@ -10,8 +10,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const apiKey = (store && store.llmApiKey) || ''
   const model = (store && store.llmModel) || 'openai/gpt-4.1-mini'
   const endpoint = (store && store.llmEndpoint) || 'https://openrouter.ai/api/v1'
-  // Use the same key for embeddings when no separate emb key is configured.
-  // OpenRouter charges for embeddings; local GPU-less embeddings are a bad fit.
+  const userEmail = (store && store.userEmail) || 'default_user@example.com'
+  const userPassword = (store && store.userPassword) || 'default_password'
 
   // Create both subcontainers up front so daemon types infer cleanly.
   const [subcontainer, uiSubcontainer] = await Promise.all([
@@ -57,6 +57,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'REQUIRE_AUTHENTICATION=false',
     'ENABLE_BACKEND_ACCESS_CONTROL=false',
     'ACCEPT_LOCAL_FILE_PATH=true',
+    'COGNEE_USER_EMAIL="' + userEmail + '"',
+    'COGNEE_USER_PASSWORD="' + userPassword + '"',
   ].join(' ')
 
   return sdk.Daemons.of(effects)

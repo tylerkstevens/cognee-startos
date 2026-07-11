@@ -6,6 +6,8 @@ const shape = z.object({
   llmProvider: z.string().optional().catch(undefined),
   llmModel: z.string().optional().catch(undefined),
   llmEndpoint: z.string().optional().catch(undefined),
+  userEmail: z.string().optional().catch(undefined),
+  userPassword: z.string().optional().catch(undefined),
 })
 
 export const storeJson = FileHelper.json(
