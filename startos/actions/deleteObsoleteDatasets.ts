@@ -77,8 +77,8 @@ export const deleteObsoleteDatasets = sdk.Action.withoutInput(
       'KuzuDB graph deletion bug. Topic datasets are NOT affected.',
     ),
     warning: i18n(
-      'Stops Cognee, removes old dataset entries directly from the database, ' +
-      'then restarts. Topic datasets (256-foundation, hashrate-heatpunks, ' +
+      'Removes old dataset entries directly from the SQLite database. ' +
+      'Topic datasets (256-foundation, hashrate-heatpunks, ' +
       'exergy, the-space, personal) are safe. A backup is recommended first.',
     ),
     allowedStatuses: 'any',
@@ -86,9 +86,6 @@ export const deleteObsoleteDatasets = sdk.Action.withoutInput(
     visibility: 'enabled',
   }),
   async ({ effects }) => {
-    // Stop Cognee so the database is quiescent
-    await effects.shutdown()
-
     let output: string
 
     try {
@@ -120,20 +117,14 @@ export const deleteObsoleteDatasets = sdk.Action.withoutInput(
         },
       )
     } catch (err) {
-      // Restart Cognee even on failure
-      await effects.restart()
       throw err
     }
-
-    // Restart Cognee
-    await effects.restart()
 
     return {
       version: '1' as const,
       title: i18n('Old Datasets Removed'),
       message: i18n(
-        'Old source-based datasets have been removed from the database. ' +
-        'Cognee is restarting.',
+        'Old source-based datasets have been removed from the database.',
       ),
       result: {
         type: 'single' as const,
