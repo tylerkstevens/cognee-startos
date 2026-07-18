@@ -1,95 +1,26 @@
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 
-const CLEANUP_SCRIPT = `
-import sqlite3
-import sys
-
-DATABASE_PATH = '/data/.cognee_system/databases/cognee_db'
-OLD_DATASETS = ['emails-personal', 'emails-exergy', 'obsidian-vault', 'chat-memory']
-
-conn = sqlite3.connect(DATABASE_PATH)
-conn.execute('PRAGMA foreign_keys = ON')
-cursor = conn.cursor()
-
-# Get IDs of old datasets
-cursor.execute(
-    'SELECT id, name FROM datasets WHERE name IN (?, ?, ?, ?)',
-    OLD_DATASETS
-)
-old_datasets = cursor.fetchall()
-
-if not old_datasets:
-    print('No old datasets found. Nothing to delete.')
-    conn.close()
-    sys.exit(0)
-
-old_ids = [str(ds[0]) for ds in old_datasets]
-placeholders = ','.join('?' * len(old_ids))
-
-print(f'Found {len(old_datasets)} old datasets:')
-for ds_id, ds_name in old_datasets:
-    print(f'  {ds_name} ({ds_id})')
-
-# Find data records that are ONLY in old datasets (not shared with topic datasets)
-cursor.execute(f'''
-    SELECT dd.data_id FROM dataset_data dd
-    WHERE dd.dataset_id IN ({placeholders})
-    AND dd.data_id NOT IN (
-        SELECT dd2.data_id FROM dataset_data dd2
-        WHERE dd2.dataset_id NOT IN ({placeholders})
-    )
-''', old_ids + old_ids)
-
-exclusive_data_ids = [str(row[0]) for row in cursor.fetchall()]
-print(f'Found {len(exclusive_data_ids)} data records exclusive to old datasets')
-
-# Delete exclusive data records
-if exclusive_data_ids:
-    data_placeholders = ','.join('?' * len(exclusive_data_ids))
-    cursor.execute(f'DELETE FROM data WHERE id IN ({data_placeholders})', exclusive_data_ids)
-    print(f'Deleted {cursor.rowcount} data records')
-
-# Delete dataset_data junction rows for old datasets
-cursor.execute(f'DELETE FROM dataset_data WHERE dataset_id IN ({placeholders})', old_ids)
-print(f'Deleted {cursor.rowcount} dataset_data junction rows')
-
-# Delete the datasets themselves (CASCADE handles acl, dataset_configuration, dataset_database)
-cursor.execute(f'DELETE FROM datasets WHERE id IN ({placeholders})', old_ids)
-print(f'Deleted {cursor.rowcount} dataset records')
-
-conn.commit()
-
-for ds_id, ds_name in old_datasets:
-    print(f'SUCCESS: Removed dataset "{ds_name}" ({ds_id})')
-
-conn.close()
-print('Cleanup complete.')
-`
-
 export const deleteObsoleteDatasets = sdk.Action.withoutInput(
   'delete-obsolete-datasets',
   async () => ({
     name: i18n('Delete Obsolete Datasets'),
     description: i18n(
-      'Remove old source-based datasets (emails-personal, emails-exergy, ' +
-      'obsidian-vault, chat-memory) from the SQLite database, bypassing the ' +
-      'KuzuDB graph deletion bug. Topic datasets are NOT affected.',
+      'Remove old source-based datasets (emails-exergy, obsidian-vault) ' +
+      'from the SQLite database, bypassing KuzuDB.',
     ),
     warning: i18n(
       'Removes old dataset entries directly from the SQLite database. ' +
-      'Topic datasets (256-foundation, hashrate-heatpunks, ' +
-      'exergy, the-space, personal) are safe. A backup is recommended first.',
+      'Topic datasets are safe. A backup is recommended first.',
     ),
     allowedStatuses: 'any',
     group: null,
     visibility: 'enabled',
   }),
   async ({ effects }) => {
-    let output: string
+    let output = ''
 
     try {
-      // Mount the main volume and create a temporary subcontainer
       const mounts = sdk.Mounts.of().mountVolume({
         volumeId: 'main',
         subpath: null,
@@ -103,34 +34,67 @@ export const deleteObsoleteDatasets = sdk.Action.withoutInput(
         mounts,
         'cleanup-obsolete-datasets',
         async (subcontainer) => {
-          // Write the Python cleanup script to the subcontainer
-          await subcontainer.writeFile('/tmp/cleanup_obsolete_datasets.py', CLEANUP_SCRIPT)
-
-          // Execute the cleanup script
-          const result = await subcontainer.execFail(
-            ['python3', '/tmp/cleanup_obsolete_datasets.py'],
+          // Simple Python one-liner to test
+          const testResult = await subcontainer.execFail(
+            ['python3', '-c', 'print("hello from subcontainer")'],
             {},
-            120000, // 2 minute timeout
+            30000,
           )
+          const testOutput = testResult.stdout.toString().trim()
 
-          return result.stdout.toString()
+          // Write the actual cleanup script
+          const script = `
+import sqlite3, sys
+DB = '/data/.cognee_system/databases/cognee_db'
+OLD = ['emails-exergy', 'obsidian-vault']
+conn = sqlite3.connect(DB)
+conn.execute('PRAGMA foreign_keys = ON')
+c = conn.cursor()
+c.execute('SELECT id, name FROM datasets WHERE name IN (?, ?)', OLD)
+ds = c.fetchall()
+if not ds:
+  print('No old datasets found')
+  conn.close()
+  sys.exit(0)
+ids = [str(d[0]) for d in ds]
+ph = ','.join('?' * len(ids))
+c.execute(f'SELECT dd.data_id FROM dataset_data dd WHERE dd.dataset_id IN ({ph}) AND dd.data_id NOT IN (SELECT dd2.data_id FROM dataset_data dd2 WHERE dd2.dataset_id NOT IN ({ph}))', ids + ids)
+excl = [str(r[0]) for r in c.fetchall()]
+if excl:
+  dph = ','.join('?' * len(excl))
+  c.execute(f'DELETE FROM data WHERE id IN ({dph})', excl)
+  print(f'Deleted {c.rowcount} exclusive data records')
+c.execute(f'DELETE FROM dataset_data WHERE dataset_id IN ({ph})', ids)
+print(f'Deleted {c.rowcount} dataset_data rows')
+c.execute(f'DELETE FROM datasets WHERE id IN ({ph})', ids)
+print(f'Deleted {c.rowcount} dataset records')
+conn.commit()
+for d_id, d_name in ds:
+  print(f'Removed: {d_name} ({d_id})')
+conn.close()
+`
+          await subcontainer.writeFile('/tmp/cleanup.py', script)
+          const result = await subcontainer.execFail(
+            ['python3', '/tmp/cleanup.py'],
+            {},
+            60000,
+          )
+          return `Test: ${testOutput}\n` + result.stdout.toString().trim()
         },
       )
-    } catch (err) {
-      throw err
+    } catch (err: any) {
+      output = `ERROR: ${err?.message || err}`
     }
 
     return {
       version: '1' as const,
-      title: i18n('Old Datasets Removed'),
-      message: i18n(
-        'Old source-based datasets have been removed from the database.',
-      ),
+      title: i18n('Delete Obsolete Datasets'),
+      message: i18n(output),
       result: {
         type: 'single' as const,
         name: i18n('Result'),
         description: null,
-        value: output || 'Done',
+        value: output,
         masked: false,
         copyable: false,
         qr: false,
