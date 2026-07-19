@@ -107,7 +107,15 @@ export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }
     .setPostBackup(async (effects) => {
       // Cognee can restart. Leave the tar on disk; it is overwritten on the
       // next backup and costs only ~2 GB on the NVMe volume.
-      await effects.restart()
+      // Small delay ensures SubContainer volume mounts are released.
+      await new Promise((r) => setTimeout(r, 2000))
+      try {
+        await effects.start()
+      } catch {
+        // If start fails, give it another shot after a brief wait
+        await new Promise((r) => setTimeout(r, 5000))
+        await effects.start()
+      }
     })
     .setPreRestore(async (effects) => {
       await effects.shutdown()
@@ -116,6 +124,12 @@ export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }
       await runCogneeTarStep(effects, 'extract')
     })
     .setPostRestore(async (effects) => {
-      await effects.restart()
+      await new Promise((r) => setTimeout(r, 2000))
+      try {
+        await effects.start()
+      } catch {
+        await new Promise((r) => setTimeout(r, 5000))
+        await effects.start()
+      }
     }),
 )
