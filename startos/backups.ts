@@ -110,11 +110,11 @@ export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }
       // Small delay ensures SubContainer volume mounts are released.
       await new Promise((r) => setTimeout(r, 2000))
       try {
-        await effects.start()
+        await effects.restart()
       } catch {
-        // If start fails, give it another shot after a brief wait
+        // If restart fails, give it another shot after a brief wait
         await new Promise((r) => setTimeout(r, 5000))
-        await effects.start()
+        await effects.restart()
       }
     })
     .setPreRestore(async (effects) => {
@@ -126,10 +126,10 @@ export const { createBackup, restoreInit } = sdk.setupBackups(async ({ effects }
     .setPostRestore(async (effects) => {
       await new Promise((r) => setTimeout(r, 2000))
       try {
-        await effects.start()
+        await effects.restart()
       } catch {
         await new Promise((r) => setTimeout(r, 5000))
-        await effects.start()
+        await effects.restart()
       }
     }),
 )
