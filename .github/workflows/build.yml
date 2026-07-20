@@ -45,7 +45,7 @@ jobs:
 
       - name: Get package version
         id: ver
-        run: echo "version=$(awk -F\"'\" '/^  version:/ {print $2}' startos/manifest/index.ts | head -1)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node -e 'console.log(require(\"./package.json\").version)')" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
