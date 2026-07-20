@@ -1,7 +1,7 @@
 # Cognee — StartOS Package
 
-![Version](https://img.shields.io/badge/version-0.1.4-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![StartOS](https://img.shields.io/badge/StartOS-0.4.0+-orange)
 
 [![Build and Release s9pk](https://github.com/tylerkstevens/cognee-startos/actions/workflows/build.yml/badge.svg)](https://github.com/tylerkstevens/cognee-startos/actions/workflows/build.yml)
@@ -117,7 +117,7 @@ cognee-startos/
 
 ## License
 
-- Package code: MIT
+- Package code: Apache-2.0
 - Upstream Cognee: Apache 2.0
 
 ---

@@ -13,13 +13,13 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     cognee: {
-      source: { dockerTag: 'cognee/cognee:latest' },
+      source: { dockerTag: 'cognee/cognee:1.4.0' },
       arch: ['x86_64'],
       emulateMissingAs: 'x86_64',
       nvidiaContainer: false,
     },
     'cognee-frontend': {
-      source: { dockerTag: 'ghcr.io/tylerkstevens/cognee-frontend:latest' },
+      source: { dockerTag: 'ghcr.io/tylerkstevens/cognee-frontend@sha256:7595efcf950da147c8d2f64200b45328f32c6828245537e2de1ca3dc9d3ee82a' },
       arch: ['x86_64'],
       emulateMissingAs: 'x86_64',
       nvidiaContainer: false,
@@ -34,12 +34,13 @@ export const manifest = setupManifest({
     stop: null,
   },
   dependencies: {},
-  version: '0.1.4:8',
+  version: '0.1.5:0',
   releaseNotes: {
-    en_US: 'Fix backup/restore auto-restart: add delay + retry so Cognee reliably starts after backup.',
+    en_US:
+      'Fix user management: new Change Password and Create User actions (previous Reset Password wrote unused env vars). Remove obsolete cleanup action. Pin container images. Set 4 GB RAM minimum. Unify license as Apache-2.0.',
   },
-  canMigrateTo: '=0.1.4:8',
-  canMigrateFrom: '<=0.1.4:8',
+  canMigrateTo: '=0.1.5:0',
+  canMigrateFrom: '<=0.1.5:0',
   satisfies: [],
   gitHash: null,
   osVersion: '0.4.0-beta.9',
@@ -49,7 +50,7 @@ export const manifest = setupManifest({
   plugins: [],
   hardwareRequirements: {
     device: [],
-    ram: null,
+    ram: 4096,
     arch: ['x86_64'],
   },
 } as any)

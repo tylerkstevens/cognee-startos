@@ -1,9 +1,9 @@
 import { sdk } from '../sdk'
 import { configureLlm } from './configureLlm'
-import { deleteObsoleteDatasets } from './deleteObsoleteDatasets'
-import { resetPassword } from './resetPassword'
+import { changePassword } from './changePassword'
+import { createUser } from './createUser'
 
 export const actions = sdk.Actions.of()
   .addAction(configureLlm)
-  .addAction(deleteObsoleteDatasets)
-  .addAction(resetPassword)
+  .addAction(changePassword)
+  .addAction(createUser)

@@ -43,10 +43,14 @@ jobs:
       - name: Build s9pk
         run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 --no-assets
 
+      - name: Get package version
+        id: ver
+        run: echo "version=$(awk -F\"'\" '/^  version:/ {print $2}' startos/manifest/index.ts | head -1)" >> "$GITHUB_OUTPUT"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Cognee ${{ github.sha }}"
+          name: "Cognee ${{ steps.ver.outputs.version }} (build ${{ github.run_number }})"
           tag_name: "build-${{ github.run_number }}"
           files: cognee_x86_64.s9pk
           fail_on_unmatched_files: true

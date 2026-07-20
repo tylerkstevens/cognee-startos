@@ -10,6 +10,9 @@ RUN apk add --no-cache git
 
 # Clone only the latest cognee frontend source
 RUN git clone --depth 1 https://github.com/topoteretes/cognee.git /tmp/cognee && \
+    cd /tmp/cognee && \
+    git fetch --depth 1 origin 6df1eda76adbcb1111d6d45ac084a4a3aef4f908 && \
+    git checkout 6df1eda76adbcb1111d6d45ac084a4a3aef4f908 && \
     cp -r /tmp/cognee/cognee-frontend/. /app/ && \
     rm -rf /tmp/cognee
 

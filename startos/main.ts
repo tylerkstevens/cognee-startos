@@ -57,8 +57,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'REQUIRE_AUTHENTICATION=false',
     'ENABLE_BACKEND_ACCESS_CONTROL=false',
     'ACCEPT_LOCAL_FILE_PATH=true',
-    'COGNEE_USER_EMAIL="' + userEmail + '"',
-    'COGNEE_USER_PASSWORD="' + userPassword + '"',
+    'DEFAULT_USER_EMAIL="' + userEmail + '"',
+    'DEFAULT_USER_PASSWORD="' + userPassword + '"',
   ].join(' ')
 
   return sdk.Daemons.of(effects)

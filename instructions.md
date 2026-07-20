@@ -54,7 +54,19 @@ The native UI opens to the *Local instance* sign-in page. Use the default local 
 - **Email:** `default_user@example.com`
 - **Password:** `default_password`
 
-These credentials are created automatically by the local Cognee backend. After signing in you can change the password from the UI or use an API key.
+These credentials are created automatically by the local Cognee backend on first use.
+
+**To change the password:** use the **Change Password** action from the StartOS UI (Actions → Change Password). It takes effect immediately — no restart required.
+
+**To create additional users:** use the **Create User** action (Cognee must be running), or call the API directly:
+
+```bash
+curl -X POST "http://cognee.embassy:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "newuser@example.com", "password": "their-password"}'
+```
+
+> **Note:** Datasets are owned per-user. A newly created user starts with an empty workspace and cannot see other users' datasets.
 
 ### 4. Verify it's running
 
@@ -66,6 +78,18 @@ curl http://cognee.embassy:8000/health
 # UI is ready when port 3000 responds
 curl -I http://cognee.embassy:3000
 ```
+
+---
+
+## User Accounts & Authentication
+
+This package runs Cognee with `REQUIRE_AUTHENTICATION=*** — the REST API does not enforce authentication and is intended for use on a trusted LAN only. Do not expose ports 3000 or 8000 to the internet.
+
+- **Local login** (UI): email/password, seeded as `default_user@example.com` / `default_password`
+- **JWT login** (API): `POST /api/v1/auth/login` with form fields `username`/`password` → returns `{"access_token": ...}`
+- **Change password**: StartOS action, or `PATCH /api/v1/users/me` with a bearer token (`{"password": "new"}`)
+- **Create user**: StartOS action, or `POST /api/v1/auth/register`
+- **API keys**: available via `POST /api/v1/auth/api-keys` after login (see Cognee docs)
 
 ---
 
@@ -190,6 +214,7 @@ The StartOS package source is at `github.com/tylerkstevens/cognee-startos`. The 
 | `/datasets` returns 404 | Not a valid endpoint | Use `/api/v1/activity/pipeline-runs` instead |
 | Backup shows tar error | Staging directory missing (pre-v0.1.3) | Upgrade to v0.1.3+ |
 | API key errors on ingest | Key not set or expired | Run Configure LLM action again |
+| Changed default user env vars but password didn't change | The default user already exists — env vars only seed first-run creation | Use the Change Password action |
 | Slow first pipeline run | Embedding model first call (cold start) | Subsequent runs are faster |
 
 ---
