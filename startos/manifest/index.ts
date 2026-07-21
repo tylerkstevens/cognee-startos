@@ -19,7 +19,7 @@ export const manifest = setupManifest({
       nvidiaContainer: false,
     },
     'cognee-frontend': {
-      source: { dockerBuild: { workdir: './frontend' } },
+      source: { dockerTag: 'cognee-frontend:latest' },
       arch: ['x86_64'],
       emulateMissingAs: 'x86_64',
       nvidiaContainer: false,
