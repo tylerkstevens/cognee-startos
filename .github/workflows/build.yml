@@ -40,6 +40,12 @@ jobs:
       - name: Install npm deps & build
         run: npm ci && npm run build
 
+      - name: Docker debug
+        run: |
+          docker version
+          docker info 2>&1 | head -5
+          docker build -t test-frontend ./frontend 2>&1 | tail -20
+
       - name: Build s9pk
         run: start-cli s9pk pack -o cognee_x86_64.s9pk --arch x86_64 --no-assets
 
