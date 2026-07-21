@@ -34,13 +34,13 @@ export const manifest = setupManifest({
     stop: null,
   },
   dependencies: {},
-  version: '0.1.5:0',
+  version: '0.1.6:0',
   releaseNotes: {
     en_US:
-      'Fix user management: new Change Password and Create User actions (previous Reset Password wrote unused env vars). Remove obsolete cleanup action. Pin container images. Set 4 GB RAM minimum. Unify license as Apache-2.0.',
+      'Separate LLM and embedding configuration actions. LLM config syncs to Cognee settings API immediately (no restart). New Configure Embeddings action with independent API key, provider, model, endpoint, and dimensions. Embedding config no longer hardcoded. Removed custom pipeline references from instructions. Store.json expanded with embedding fields.',
   },
-  canMigrateTo: '=0.1.5:0',
-  canMigrateFrom: '<=0.1.5:0',
+  canMigrateTo: '=0.1.6:0',
+  canMigrateFrom: '<=0.1.6:0',
   satisfies: [],
   gitHash: null,
   osVersion: '0.4.0-beta.9',

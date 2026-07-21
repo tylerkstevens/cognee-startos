@@ -7,11 +7,28 @@ export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting Cognee...'))
 
   const store = await storeJson.read().once()
-  const apiKey = (store && store.llmApiKey) || ''
-  const model = (store && store.llmModel) || 'openai/gpt-4.1-mini'
-  const endpoint = (store && store.llmEndpoint) || 'https://openrouter.ai/api/v1'
-  const userEmail = (store && store.userEmail) || 'default_user@example.com'
-  const userPassword = (store && store.userPassword) || 'default_password'
+  const llmApiKey = (store && store.llmApiKey) || ''
+  const llmProvider = (store && store.llmProvider) || 'openai'
+  const llmModel = (store && store.llmModel) || 'openai/gpt-4.1-mini'
+  const llmEndpoint =
+    (store && store.llmEndpoint) || 'https://openrouter.ai/api/v1'
+
+  // Embedding config — defaults to LLM values if not set separately
+  const embeddingApiKey =
+    (store && store.embeddingApiKey) || llmApiKey
+  const embeddingProvider =
+    (store && store.embeddingProvider) || 'openai'
+  const embeddingModel =
+    (store && store.embeddingModel) || 'openai/text-embedding-3-small'
+  const embeddingEndpoint =
+    (store && store.embeddingEndpoint) || llmEndpoint
+  const embeddingDimensions =
+    (store && store.embeddingDimensions) || 1536
+
+  const userEmail =
+    (store && store.userEmail) || 'default_user@example.com'
+  const userPassword =
+    (store && store.userPassword) || 'default_password'
 
   // Create both subcontainers up front so daemon types infer cleanly.
   const [subcontainer, uiSubcontainer] = await Promise.all([
@@ -34,19 +51,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
     ),
   ])
 
-  // Embeddings + LLM both point at OpenRouter via the shared API key.
-  // Construction via sh -c is intentional: StartOS env propagation into
-  // Python/pydantic-settings is unreliable, so we inject at process start.
+  // Inject ALL config as env vars via sh -c prefix.
+  // LLM config also needs to be pushed to Cognee's internal settings API
+  // after startup (see post-start sync below).
+  // Embedding config is env-only — Cognee reads it from pydantic-settings.
   const envPrefix = [
-    'LLM_API_KEY="' + apiKey + '"',
-    'LLM_PROVIDER=openai',
-    'LLM_MODEL="' + model + '"',
-    'LLM_ENDPOINT="' + endpoint + '"',
-    'EMBEDDING_API_KEY="' + apiKey + '"',
-    'EMBEDDING_PROVIDER=openai',
-    'EMBEDDING_MODEL=openai/text-embedding-3-small',
-    'EMBEDDING_ENDPOINT="' + endpoint + '"',
-    'EMBEDDING_DIMENSIONS=1536',
+    'LLM_API_KEY="' + llmApiKey + '"',
+    'LLM_PROVIDER=' + llmProvider,
+    'LLM_MODEL="' + llmModel + '"',
+    'LLM_ENDPOINT="' + llmEndpoint + '"',
+    'EMBEDDING_API_KEY="' + embeddingApiKey + '"',
+    'EMBEDDING_PROVIDER=' + embeddingProvider,
+    'EMBEDDING_MODEL=' + embeddingModel,
+    'EMBEDDING_ENDPOINT="' + embeddingEndpoint + '"',
+    'EMBEDDING_DIMENSIONS=' + embeddingDimensions,
     'DB_PROVIDER=sqlite',
     'GRAPH_DATABASE_PROVIDER=kuzu',
     'VECTOR_DB_PROVIDER=lancedb',

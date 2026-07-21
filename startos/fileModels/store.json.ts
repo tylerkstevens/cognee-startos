@@ -6,6 +6,11 @@ const shape = z.object({
   llmProvider: z.string().optional().catch(undefined),
   llmModel: z.string().optional().catch(undefined),
   llmEndpoint: z.string().optional().catch(undefined),
+  embeddingApiKey: z.string().optional().catch(undefined),
+  embeddingProvider: z.string().optional().catch(undefined),
+  embeddingModel: z.string().optional().catch(undefined),
+  embeddingEndpoint: z.string().optional().catch(undefined),
+  embeddingDimensions: z.number().optional().catch(undefined),
   userEmail: z.string().optional().catch(undefined),
   userPassword: z.string().optional().catch(undefined),
 })
